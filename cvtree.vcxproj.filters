@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="tidy.cpp">
+    <ClCompile Include="improved.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

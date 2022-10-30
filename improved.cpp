@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <thread>
 
 int number_bacteria;
 char** bacteria_name;
@@ -12,6 +13,8 @@ short code[27] = { 0, 2, 1, 2, 3, 4, 5, 6, 7, -1, 8, 9, 10, 11, -1, 12, 13, 14, 
 #define LEN				6
 #define AA_NUMBER		20
 #define	EPSILON			1e-010
+
+#define NUM_THREADS 16
 
 void Init()
 {
@@ -250,22 +253,62 @@ double CompareBacteria(Bacteria* b1, Bacteria* b2)
 	return correlation / (sqrt(vector_len1) * sqrt(vector_len2));
 }
 
+void LoadBacteria_thread(int id, Bacteria** b_array)
+{
+	printf("thread %d started\n", id);
+	for (int i = id; i < number_bacteria; i+=NUM_THREADS)
+	{
+		printf("%d:\tload %d of %d\n", id, i + 1, number_bacteria);
+		b_array[i] = new Bacteria(bacteria_name[i]);
+	}
+	printf("thread %d finished\n", id);
+}
+
+void CompareAllBacteria_thread(int id, Bacteria** b_array)
+{
+	printf("thread2 %d started\n", id);
+	for (int i = id; i < number_bacteria - 1; i += NUM_THREADS)
+	{
+		for (int j = i + 1; j < number_bacteria; j++)
+		{
+			double correlation = CompareBacteria(b_array[i], b_array[j]);
+			printf("%d:\t%2d %2d -> %.20lf\n", id, i, j, correlation);
+		}
+	}
+	printf("thread2 %d complete\n", id);
+}
+
 void CompareAllBacteria()
 {
 	Bacteria** b = new Bacteria*[number_bacteria];
-    for(int i=0; i<number_bacteria; i++)
+	std::thread threads[NUM_THREADS];
+	for (int i = 0; i < NUM_THREADS; i++)
 	{
-		printf("load %d of %d\n", i+1, number_bacteria);
-		b[i] = new Bacteria(bacteria_name[i]);
+		threads[i] = std::thread(LoadBacteria_thread, i, b);
 	}
+	for (int i = 0; i < NUM_THREADS; i++)
+	{
+		threads[i].join();
+	}
+	printf("bacteria loaded\n");
 
-    for(int i=0; i<number_bacteria-1; i++)
-		for(int j=i+1; j<number_bacteria; j++)
-		{
-			printf("%2d %2d -> ", i, j);
-			double correlation = CompareBacteria(b[i], b[j]);
-			printf("%.20lf\n", correlation);
-		}
+  //  for(int i=0; i<number_bacteria-1; i++)
+		//for(int j=i+1; j<number_bacteria; j++)
+		//{
+		//	printf("%2d %2d -> ", i, j);
+		//	double correlation = CompareBacteria(b[i], b[j]);
+		//	printf("%.20lf\n", correlation);
+		//}
+	std::thread threads2[NUM_THREADS];
+	for (int i = 0; i < NUM_THREADS; i++)
+	{
+		threads2[i] = std::thread(CompareAllBacteria_thread, i, b);
+	}
+	for (int i = 0; i < NUM_THREADS; i++)
+	{
+		threads2[i].join();
+	}
+	printf("bacteria compared\n");
 }
 
 int main(int argc,char * argv[])

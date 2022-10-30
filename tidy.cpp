@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <thread>
 
 int number_bacteria;
 char** bacteria_name;
@@ -12,6 +13,8 @@ short code[27] = { 0, 2, 1, 2, 3, 4, 5, 6, 7, -1, 8, 9, 10, 11, -1, 12, 13, 14, 
 #define LEN				6
 #define AA_NUMBER		20
 #define	EPSILON			1e-010
+
+#define NUM_THREADS 16
 
 void Init()
 {
@@ -173,8 +176,27 @@ double CompareBacteria(Bacteria* b1, Bacteria* b2)
 	return correlation / (sqrt(vector_len1) * sqrt(vector_len2));
 }
 
-void CompareAllBacteria()
+void CompareAllBacteria_thread(int id)
 {
+	printf("thread %d started\n", id);
+	for (int i = id; i < number_bacteria - 1; i += NUM_THREADS)
+	{
+		Bacteria* b1 = new Bacteria(bacteria_name[i]);
+
+		for (int j = i + 1; j < number_bacteria; j++)
+		{
+			Bacteria* b2 = new Bacteria(bacteria_name[j]);
+			double correlation = CompareBacteria(b1, b2);
+			printf("%d:\t%03d %03d -> %.10lf\n", id, i, j, correlation);
+			delete b2;
+		}
+		delete b1;
+	}
+	printf("thread %d complete\n", id);
+}
+
+void CompareAllBacteria()
+{/*
     for(int i=0; i<10-1; i++)
 	{
 		Bacteria* b1 = new Bacteria(bacteria_name[i]);
@@ -187,7 +209,19 @@ void CompareAllBacteria()
 			delete b2;
 		}
 		delete b1;
+	}*/
+	std::thread bthreads[NUM_THREADS];
+	for (int i = 0; i < NUM_THREADS; i++)
+	{
+		bthreads[i] = std::thread(CompareAllBacteria_thread, i);
 	}
+
+
+	for (int i = 0; i < NUM_THREADS; i++)
+	{
+		bthreads[i].join();
+	}
+	printf("all threads complete\n");
 }
 
 int main(int argc,char * argv[])
